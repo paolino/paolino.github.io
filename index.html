@@ -13,123 +13,129 @@
 <p></head>
 <body> </p>
 
-<div class=container>
-<div class="col-sm-8 col-sm-offset-2">
-# Typeclasses to break code
+<h1>Typeclasses to break code</h1>
 
-## Context
+<h2>Context</h2>
 
-Lately I'm working on a project of mine *mootzoo*. It's a REST server on a sqlite DB and it happens the protocol is growing. 
+<p>Lately I'm working on a project of mine <em>mootzoo</em>. It's a REST server on a sqlite DB and it happens the protocol is growing. </p>
 
-I splitted the protocol in half. Put requests and Get requests. Put requests are easier as they return (), letting aside the failures which are not in the type.
+<p>I splitted the protocol in half. Put requests and Get requests. Put requests are easier as they return (), letting aside the failures which are not in the type.</p>
 
-Easy like
+<p>Easy like</p>
 
-    data Put
-        = Boot Mail String  
-        | Invite Login Mail String
-        | Logout Login String
-        | Reminds Mail String
-        | Migrate Login Mail String
-        | New Login Attach String
-        | Retract Login MessageId
-        | Leave Login Dispose MessageId
-        | Vote Login MessageId Bool
-        .....
+<pre><code>data Put
+    = Boot Mail String  
+    | Invite Login Mail String
+    | Logout Login String
+    | Reminds Mail String
+    | Migrate Login Mail String
+    | New Login Attach String
+    | Retract Login MessageId
+    | Leave Login Dispose MessageId
+    | Vote Login MessageId Bool
+    .....
+</code></pre>
 
-Well, it happened I added some more features, and I'm not sure this is over.
+<p>Well, it happened I added some more features, and I'm not sure this is over.</p>
 
-The main point here is that each module now exports some functions which we can simplify being in IO.
+<p>The main point here is that each module now exports some functions which we can simplify being in IO.</p>
 
-module *Users* exporting 
+<p>module <em>Users</em> exporting </p>
 
-    boot :: Mail -> String -> IO ()
-    invite :: Login -> Mail -> String -> IO ()
+<pre><code>boot :: Mail -&gt; String -&gt; IO ()
+invite :: Login -&gt; Mail -&gt; String -&gt; IO ()
+...
+</code></pre>
+
+<p>module <em>Messages</em> exporting</p>
+
+<pre><code>new :: Login -&gt; Mail -&gt; String -&gt; IO ()
+...
+</code></pre>
+
+<p>module <em>Voting</em> exporting</p>
+
+<pre><code>vote :: Login -&gt; MessageId -&gt; Bool -&gt; IO ()
+</code></pre>
+
+<p>Back to module <em>Protocol</em>  which implements the big</p>
+
+<pre><code>Put -&gt; IO ()
+</code></pre>
+
+<p>importing all necessary functions from the other modules.</p>
+
+<p>It's obvious this thing is not any modular.</p>
+
+<h2>Solution</h2>
+
+<p>We need a <strong>typeclass</strong>!</p>
+
+<pre><code>class Put a where
+  put :: a -&gt; IO ()
+</code></pre>
+
+<p>Now each module declares a datatype with its part of the protocol and exports its put functions and <em>Protocol</em> is gone.</p>
+
+<h2>Getting</h2>
+
+<p>Getting is harder. It would be nice if the Get declares its response type and so we have to use GADTs.</p>
+
+<pre><code>data Get b where
+    Conversation :: Login -&gt; MessageId -&gt; Get [Exposed]
+    Past :: Login -&gt; MessageId -&gt; Get [Exposed]
+    Check :: Login -&gt; Get String
     ...
+</code></pre>
 
-module *Messages* exporting
+<p>Now, to split it </p>
 
-    new :: Login -> Mail -> String -> IO ()
-    ...
+<pre><code>class Get a b where
+  get :: a b -&gt; IO b
+</code></pre>
 
-module *Voting* exporting
+<p>module <em>Messages</em> will declare</p>
 
-    vote :: Login -> MessageId -> Bool -> IO ()
+<pre><code>data MessageGet b where
+    Conversation :: Login -&gt; MessageId -&gt; Get [Exposed]
+    Past :: Login -&gt; MessageId -&gt; Get [Exposed]
+    CountRoots :: String -&gt; Get Integer
+</code></pre>
 
-Back to module *Protocol*  which implements the big
+<p>but this is not going to work...</p>
 
-    Put -> IO ()
+<pre><code>instance Get MessageGet ?
+</code></pre>
 
-importing all necessary functions from the other modules.
+<p>the <em>b</em> here is not useful to select an instance, it's just a constraint for us to write more correct functions.</p>
 
-It's obvious this thing is not any modular.
+<p>We have to make it disappear in the class ...</p>
 
-## Solution
+<pre><code>data WGet = WGet (forall b . a b -&gt; IO b)
 
-We need a **typeclass**!
+class Get a where
+  get :: WGet a
+</code></pre>
 
-    class Put a where
-      put :: a -> IO ()
+<p>We still have to write a type correct function </p>
 
-Now each module declares a datatype with its part of the protocol and exports its put functions and *Protocol* is gone.
+<pre><code>runMessageGet :: MessageGet b -&gt; IO b
+</code></pre>
 
-## Getting
+<p>to give it to WGet, but we can split the get protocol.</p>
 
-Getting is harder. It would be nice if the Get declares its response type and so we have to use GADTs.
+<pre><code>instance Get MessageGet where
+  get = WGet runMessageGet
+</code></pre>
 
-    data Get b where
-        Conversation :: Login -> MessageId -> Get [Exposed]
-        Past :: Login -> MessageId -> Get [Exposed]
-        Check :: Login -> Get String
-        ...
+<h3>Using Get</h3>
 
-Now, to split it 
+<p>At the request handler we will construct values like <code>CountRoots "hello"</code>  which cannot be fed to <code>get</code> but <em>haskell</em> works so</p>
 
-    class Get a b where
-      get :: a b -> IO b
+<pre><code>rget :: Get a =&gt; a b -&gt; IO b
+rget x = let WGet f = get in f x
+</code></pre>
 
-module *Messages* will declare
+<p>and now we can feed <code>CountRoots "higher rank"</code> to rget and receive the result of <code>runMessageGet</code> wich will be an <code>IO Integer</code> to respond</p>
 
-    data MessageGet b where
-        Conversation :: Login -> MessageId -> Get [Exposed]
-        Past :: Login -> MessageId -> Get [Exposed]
-        CountRoots :: String -> Get Integer
-
-
-but this is not going to work...
-
-    instance Get MessageGet ?
-
-the *b* here is not useful to select an instance, it's just a constraint for us to write more correct functions.
-
-We have to make it disappear in the class ...
-
-    data WGet = WGet (forall b . a b -> IO b)
-
-    class Get a where
-      get :: WGet a
-
-We still have to write a type correct function 
-
-    runMessageGet :: MessageGet b -> IO b
-
-to give it to WGet, but we can split the get protocol.
-
-    instance Get MessageGet where
-      get = WGet runMessageGet
-
-### Using Get
-
-At the request handler we will construct values like `CountRoots "hello"`  which cannot be fed to `get` but *haskell* works so
-
-    rget :: Get a => a b -> IO b
-    rget x = let WGet f = get in f x
-
-and now we can feed `CountRoots "higher rank"` to rget and receive the result of `runMessageGet` wich will be an `IO Integer` to respond
-
-
-
-</div>
-
-<p></div>
-</body></p>
+<p></body></p>
