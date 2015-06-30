@@ -18,4 +18,25 @@
     | Retract Login MessageId
     | Leave Login Dispose MessageId
     | Vote Login MessageId Bool
+    .....
 </code></pre>
+
+<p>Well, it happened I added some more features, and I'm not sure this is over.</p>
+
+<p>The main point here is that each module now exports some functions which we can simplify being in IO.</p>
+
+<ul>
+<li>module <em>Users</em> exporting 
+boot :: Mail -> String -> IO ()
+invite :: Login -> Mail -> String -> IO ()
+...</li>
+<li>module <em>Messages</em> exporting
+new :: Login -> Mail -> String -> IO ()
+...</li>
+<li>module <em>Voting</em> exporting
+vote :: Login -> MessageId -> Bool -> IO ()</li>
+</ul>
+
+<p>Back to module <em>Protocol</em>  which implements the big
+    Put -> IO ()
+importing all necessary functions from the other modules.</p>
