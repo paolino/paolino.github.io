@@ -1,1 +1,21 @@
-Hello World
+<h1>Type families to break code</h1>
+
+<h2>Context</h2>
+
+<p>Lately I'm working on a project of mine <em>mootzoo</em>. It's a REST server on a sqlite DB and it happens the protocol is growing. </p>
+
+<p>I splitted the protocol in half. Put requests and Get requests. Put requests are easier as they return (), letting aside the failures which are not in the type.</p>
+
+<p>Easy like</p>
+
+<p><code>data Put
+        = Boot Mail String <br />
+        | Invite Login Mail String
+        | Logout Login String
+        | Reminds Mail String
+        | Migrate Login Mail String
+        | New Login Attach String
+        | Retract Login MessageId
+        | Leave Login Dispose MessageId
+        | Vote Login MessageId Bool
+</code></p>
