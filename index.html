@@ -25,16 +25,27 @@
 
 <p>The main point here is that each module now exports some functions which we can simplify being in IO.</p>
 
-<p>module <em>Users</em> exporting 
-    boot :: Mail -> String -> IO ()
-    invite :: Login -> Mail -> String -> IO ()
-    ...
-module <em>Messages</em> exporting
-    new :: Login -> Mail -> String -> IO ()
-    ...
-module <em>Voting</em> exporting
-    vote :: Login -> MessageId -> Bool -> IO ()</p>
+<p>module <em>Users</em> exporting </p>
 
-<p>Back to module <em>Protocol</em>  which implements the big
-    Put -> IO ()
-importing all necessary functions from the other modules.</p>
+<pre><code>boot :: Mail -&gt; String -&gt; IO ()
+invite :: Login -&gt; Mail -&gt; String -&gt; IO ()
+...
+</code></pre>
+
+<p>module <em>Messages</em> exporting</p>
+
+<pre><code>new :: Login -&gt; Mail -&gt; String -&gt; IO ()
+...
+</code></pre>
+
+<p>module <em>Voting</em> exporting</p>
+
+<pre><code>vote :: Login -&gt; MessageId -&gt; Bool -&gt; IO ()
+</code></pre>
+
+<p>Back to module <em>Protocol</em>  which implements the big</p>
+
+<pre><code>Put -&gt; IO ()
+</code></pre>
+
+<p>importing all necessary functions from the other modules.</p>
