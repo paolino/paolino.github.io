@@ -74,15 +74,17 @@ invite :: Login -&gt; Mail -&gt; String -&gt; IO ()
 
 <p>Now, to split it </p>
 
-<p>class Get a b where
-    get :: a b -> IO b</p>
+<pre><code>class Get a b where
+  get :: a b -&gt; IO b
+</code></pre>
 
 <p>module <em>Messages</em> will declare</p>
 
-<p>data MessageGet b where
-        Conversation :: Login -> MessageId -> Get [Exposed]
-        Past :: Login -> MessageId -> Get [Exposed]
-        CountRoots :: String -> Get Integer</p>
+<pre><code>data MessageGet b where
+    Conversation :: Login -&gt; MessageId -&gt; Get [Exposed]
+    Past :: Login -&gt; MessageId -&gt; Get [Exposed]
+    CountRoots :: String -&gt; Get Integer
+</code></pre>
 
 <p>but this is not going to work...</p>
 
