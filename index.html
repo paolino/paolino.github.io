@@ -84,33 +84,38 @@ invite :: Login -&gt; Mail -&gt; String -&gt; IO ()
         Past :: Login -> MessageId -> Get [Exposed]
         CountRoots :: String -> Get Integer</p>
 
-<p>but this is not going to work</p>
+<p>but this is not going to work...</p>
 
-<p>instance Get MessageGet <strong>what</strong></p>
+<pre><code>instance Get MessageGet ?
+</code></pre>
 
-<p>the <em>b</em> here is not useful to select an instance, it's just a constraint for us to write different functions for different requests ....</p>
+<p>the <em>b</em> here is not useful to select an instance, it's just a constraint for us to write more correct functions.</p>
 
-<p>We have to make it disappear in the class ..</p>
+<p>We have to make it disappear in the class ...</p>
 
-<p>data WGet = WGet (forall b . a b -> IO b)</p>
+<pre><code>data WGet = WGet (forall b . a b -&gt; IO b)
 
-<p>class Get a where
-      get :: WGet a</p>
+class Get a where
+  get :: WGet a
+</code></pre>
 
 <p>We still have to write a type correct function </p>
 
-<p>runMessageGet :: MessageGet b -> IO b</p>
+<pre><code>runMessageGet :: MessageGet b -&gt; IO b
+</code></pre>
 
 <p>to give it to WGet, but we can split the get protocol.</p>
 
-<p>instance Get MessageGet where
-    get = WGet runMessageGet</p>
+<pre><code>instance Get MessageGet where
+  get = WGet runMessageGet
+</code></pre>
 
 <h3>Using Get</h3>
 
-<p>At the request handler we will construct values like <code>CountRoots "hello"</code>  which cannot be fed to <code>get</code> but haskell works so</p>
+<p>At the request handler we will construct values like <code>CountRoots "hello"</code>  which cannot be fed to <code>get</code> but <em>haskell</em> works so</p>
 
-<p>rget :: Get a => a b -> IO b
-  rget x = let WGet f = get in f x</p>
+<pre><code>rget :: Get a =&gt; a b -&gt; IO b
+rget x = let WGet f = get in f x
+</code></pre>
 
 <p>and now we can feed <code>CountRoots "higher rank"</code> to rget and receive the result of <code>runMessageGet</code> wich will be an <code>IO Integer</code> to respond</p>
